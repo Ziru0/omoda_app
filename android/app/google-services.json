@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "987490313645",
+    "project_id": "omoda-1585e",
+    "storage_bucket": "omoda-1585e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:987490313645:android:7e4f9d14e266864b63ed24",
+        "android_client_info": {
+          "package_name": "com.example.omoda"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuSNQkFmQXG475dT-HMMXyGhloplbhZBc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
