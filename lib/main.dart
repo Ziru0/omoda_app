@@ -8,6 +8,7 @@ import 'package:omoda/tabpages/profile_tab.dart';
 import 'package:omoda/tabpages/profilepages/notifications.dart';
 import 'package:omoda/views/homescreen.dart';
 import 'package:omoda/views/login_screen.dart';
+import 'package:omoda/views/mapexample.dart';
 import 'package:omoda/views/menupages/ride_history.dart';
 import 'package:omoda/views/otp_verification_screen.dart';
 import 'package:omoda/views/profile_settings.dart';
@@ -37,7 +38,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         textTheme: GoogleFonts.poppinsTextTheme(textTheme),
       ),
-      home:     MySplashScreen (),
+      home:     HomeScreen (),
     );
   }
 }

@@ -1,10 +1,15 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:omoda/views/menupages/settings.dart';
+import '../controller/mapcon.dart';
 import '../utils/app_colors.dart';
 import '../views/menupages/invites.dart';
 import '../views/menupages/payment.dart';
@@ -16,6 +21,7 @@ import '../widgets/text_widget.dart';
 class HomeTabPage extends StatefulWidget {
   const HomeTabPage({super.key});
 
+
   @override
   State<HomeTabPage> createState() => _HomeTabPageState();
 }
@@ -24,13 +30,16 @@ class _HomeTabPageState extends State<HomeTabPage> {
   final TextEditingController destinationController = TextEditingController();
   final TextEditingController sourceController = TextEditingController();
 
-  bool showSourceField = false;
+  List<LatLng> routePoints = [];
+  final LatLng startPoint = LatLng(8.5962,123.3627);
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: buildDrawer(userName: "Harold Andrei Ruiz", userImage: null), // Assign the drawer here
+      drawer: buildDrawer(userName: "Harold Andrei Ruiz", userImage: null), // Assign
       appBar: AppBar(
+
         title: Text(
           "Home",
           style: GoogleFonts.poppins(),
@@ -45,49 +54,40 @@ class _HomeTabPageState extends State<HomeTabPage> {
           ),
         ),
       ),
-      body: Stack(
+      body: FlutterMap(
+        options: MapOptions(
+          initialCenter: LatLng(8.56469, 123.3336),
+          initialZoom: 14,
+        ),
         children: [
-          buildMap(),
-          buildProfileTile(
-            name: "Harold Andrei Ruiz",
-            imageUrl: null,// Or provide a valid image URL
+          Stack(
+            children: [
+              TileLayer(
+                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                subdomains: ['a', 'b', 'c'],
+              ),
+              if (routePoints.isNotEmpty)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: routePoints,
+                      color: Colors.blue,
+                      strokeWidth: 4.0,
+                    ),
+                  ],
+                ),
+              // These widgets should be on top of the map, hence in a stack
+              buildProfileTile(name: 'Harold Ruiz', imageUrl: null),
+              buildTextField(),
+              buildBottomSheet(),
+              buildTextFieldForSource(),
+            ],
           ),
-
-          buildTextField(),
-          buildBottomSheet(),
-          buildTextFieldForSource(),
         ],
       ),
     );
   }
 
-  Widget buildMap() {
-    return FlutterMap(
-      options: MapOptions(
-        initialCenter: LatLng(8.56469, 123.3336), // Map's initial center point
-        initialZoom: 15,
-      ),
-      children: [
-        TileLayer(
-          urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-          subdomains: ['a', 'b', 'c', 'd'], // Required for Carto
-          userAgentPackageName: 'com.example.app',
-        ),
-        PolylineLayer(
-          polylines: [
-            Polyline(
-              points: [
-                LatLng(8.56000, 123.34000), // Galas (Starting point)
-                LatLng(8.58000, 123.35000), // DCIT School (Ending point)
-              ],
-              color: Colors.red, // Polyline color
-              strokeWidth: 4.0, // Width of the polyline
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 
   Widget buildProfileTile({required String? name, required String? imageUrl}) {
     return Positioned(
@@ -187,6 +187,7 @@ class _HomeTabPageState extends State<HomeTabPage> {
           borderRadius: BorderRadius.circular(8),
         ),
         child: TextField(
+          controller: destinationController,
           style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -197,15 +198,55 @@ class _HomeTabPageState extends State<HomeTabPage> {
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
-            suffixIcon: const Padding(
-              padding: EdgeInsets.only(left: 10),
-              child: Icon(Icons.search),
+            suffixIcon:
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () async {
+                if (destinationController.text.isNotEmpty) {
+                  await fetchAndSetRoute(destinationController.text);
+                }
+              },
             ),
             border: InputBorder.none,
           ),
         ),
       ),
     );
+  }
+
+  Future<void> searchAndShowRoute(String destination) async {
+    try {
+      // Geocode the destination to get latitude and longitude
+      List<Location> locations = await locationFromAddress(destination);
+
+      if (locations.isNotEmpty) {
+        double destinationLat = locations.first.latitude;
+        double destinationLng = locations.first.longitude;
+
+        // Call your route fetching method here (e.g., using a routing API)
+        List<LatLng> route = await fetchRouteToDestination(destinationLat, destinationLng);
+
+        // Update the map with the new polyline
+        setState(() {
+          routePoints = route;
+        });
+      } else {
+        print('No location found for $destination');
+      }
+    } catch (e) {
+      print('Error fetching route: $e');
+    }
+  }
+
+  Future<List<LatLng>> fetchRouteToDestination(double destinationLat, double destinationLng) async {
+    // Implement your routing logic here to fetch the route.
+    // For example, you can call an API like OpenRouteService or Google Directions API.
+
+    // Dummy route for now:
+    return [
+      LatLng(8.5896, 123.3336),  // Start point (your current location)
+      LatLng(destinationLat, destinationLng), // Destination
+    ];
   }
 
   Widget buildTextFieldForSource() {
@@ -375,6 +416,7 @@ class _HomeTabPageState extends State<HomeTabPage> {
   void buildSourceSheet({
     required TextEditingController sourceController,
   }) {
+
     Get.bottomSheet(
       Container(
         width: Get.width,
@@ -664,4 +706,60 @@ class _HomeTabPageState extends State<HomeTabPage> {
       ),
     );
   }
+
+
+  /// Fetch route and set polyline points
+  Future<void> fetchAndSetRoute(String destination) async {
+    try {
+      // Geocode destination to get its coordinates
+      final destinationCoords = await geocodeDestination(destination);
+      if (destinationCoords == null) {
+        throw Exception("Unable to find destination coordinates.");
+      }
+
+      // Fetch the route between the start point and destination
+      final route = await fetchRoute(startPoint, destinationCoords);
+      setState(() {
+        routePoints = route;
+      });
+    } catch (e) {
+      print('Error fetching route: $e');
+    }
+  }
+
+  /// Geocode destination address using OpenRouteService
+  Future<LatLng?> geocodeDestination(String address) async {
+    const String apiKey = '5b3ce3597851110001cf624806cb530231bd49338fd6a9a3cd129e38'; // Replace with your API key
+    final url =
+        'https://api.openrouteservice.org/geocode/search?api_key=$apiKey&text=$address';
+
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['features'].isNotEmpty) {
+        final coords = data['features'][0]['geometry']['coordinates'];
+        return LatLng(coords[1], coords[0]);
+      }
+    }
+    return null;
+  }
+
+  /// Fetch route between start and destination using OpenRouteService
+  Future<List<LatLng>> fetchRoute(LatLng start, LatLng end) async {
+    const String apiKey = '5b3ce3597851110001cf624806cb530231bd49338fd6a9a3cd129e38'; // Replace with your API key
+    final url =
+        'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=${start.longitude},${start.latitude}&end=${end.longitude},${end.latitude}';
+
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final coordinates = data['features'][0]['geometry']['coordinates'];
+      return coordinates
+          .map<LatLng>((coord) => LatLng(coord[1], coord[0]))
+          .toList();
+    } else {
+      throw Exception("Failed to fetch route.");
+    }
+  }
+
 }
